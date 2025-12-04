@@ -1,5 +1,7 @@
 package xyz.ytora.ytool.classcache.classmeta;
 
+import xyz.ytora.ytool.str.Strs;
+
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -11,6 +13,12 @@ import java.util.stream.Collectors;
  * 方法元数据
  */
 public class MethodMetadata {
+
+    /**
+     * 当前 MethodMetadata 所属的 ClassMetadata
+     */
+    private final ClassMetadata<?> classMetadata;
+
     /**
      * 方法反射对象
      */
@@ -63,7 +71,14 @@ public class MethodMetadata {
      */
     private volatile MethodHandle cachedHandle;
 
-    public MethodMetadata(Method method) {
+    /**
+     * 当前 getter 或 setter 方法所属的字段
+     */
+    private FieldMetadata toField;
+
+
+    public MethodMetadata(ClassMetadata<?> classMetadata, Method method) {
+        this.classMetadata = classMetadata;
         this.method = method;
         this.methodName = method.getName();
         this.annotations = Arrays.stream(method.getAnnotations())
@@ -277,6 +292,28 @@ public class MethodMetadata {
 
     public Type genericReturnType() {
         return genericReturnType;
+    }
+
+    /**
+     * 返回当前 方法 对于的 字段
+     * <p>
+     *     判断当前方法是否属于某个字段的 getter 或者 setter 方法，如果是，就返回该字段
+     * <p/>
+     */
+    public FieldMetadata toField() {
+        if (toField != null) {
+            return toField;
+        }
+        String fieldName;
+        if (methodName.startsWith("get") || methodName.startsWith("set")) {
+             fieldName = Strs.firstLowercase(methodName.substring(3));
+        } else if (methodName.startsWith("is")) {
+             fieldName = Strs.firstLowercase(methodName.substring(2));
+        } else {
+            fieldName = methodName;
+        }
+        toField = classMetadata.getField(fieldName);
+        return toField;
     }
 
     /**

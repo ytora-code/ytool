@@ -1,5 +1,7 @@
 package xyz.ytora.ytool.classcache.classmeta;
 
+import xyz.ytora.ytool.str.Strs;
+
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -14,6 +16,12 @@ import java.util.stream.Collectors;
  * 字段元数据
  */
 public class FieldMetadata {
+
+    /**
+     * 当前 FieldMetadata 所属的 ClassMetadata
+     */
+    private final ClassMetadata<?> classMetadata;
+
     /**
      * 字段名称
      */
@@ -42,7 +50,18 @@ public class FieldMetadata {
      */
     private volatile VarHandle cachedHandle;
 
-    public FieldMetadata(Field sourceField) {
+    /**
+     * 该字段对于的 getter 方法
+     */
+    private MethodMetadata getter;
+
+    /**
+     * 该字段对于的 setter 方法
+     */
+    private MethodMetadata setter;
+
+    public FieldMetadata(ClassMetadata<?> classMetadata, Field sourceField) {
+        this.classMetadata = classMetadata;
         this.name = sourceField.getName();
         this.sourceField = sourceField;
         this.type = sourceField.getType();
@@ -134,7 +153,27 @@ public class FieldMetadata {
         return Modifier.isTransient(modifiers);
     }
 
+    /* ============================ setter ============================ */
+    public MethodMetadata setter() {
+        if (setter != null) {
+            return setter;
+        }
+        setter = classMetadata.getMethod("set" + Strs.firstCapitalize(name));
+        return setter;
+    }
+
     /* ============================ getter ============================ */
+    public MethodMetadata getter() {
+        if (getter != null) {
+            return getter;
+        }
+        getter = classMetadata.getMethod("get" + Strs.firstCapitalize(name));
+        if (getter == null) {
+            getter = classMetadata.getMethod("is" + Strs.firstCapitalize(name));
+        }
+        return getter;
+    }
+
     public String getName() {
         return name;
     }

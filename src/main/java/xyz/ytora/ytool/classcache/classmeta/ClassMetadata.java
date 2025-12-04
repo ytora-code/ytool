@@ -70,6 +70,14 @@ public class ClassMetadata<T> {
         collectMethods(sourceClass);
     }
 
+    public String getClassName() {
+        return className;
+    }
+
+    public String getSimpleName() {
+        return simpleName;
+    }
+
     /**
      * 获取当前class的指定字段
      */
@@ -176,7 +184,7 @@ public class ClassMetadata<T> {
                 }
 
                 //子类优先
-                fields.putIfAbsent(field.getName(), new FieldMetadata(field));
+                fields.putIfAbsent(field.getName(), new FieldMetadata(this, field));
             }
             type = type.getSuperclass();
         }
@@ -208,7 +216,7 @@ public class ClassMetadata<T> {
                 }
                 String key = buildMethodKey(method.getName(), method.getParameterTypes());
                 //子类优先
-                methods.putIfAbsent(key, new MethodMetadata(method));
+                methods.putIfAbsent(key, new MethodMetadata(this, method));
             }
             type = type.getSuperclass();
         }

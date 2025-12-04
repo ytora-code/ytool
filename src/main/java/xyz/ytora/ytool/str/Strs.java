@@ -283,6 +283,14 @@ public class Strs {
     }
 
     /**
+     * 首字母小写
+     */
+    public static String firstLowercase(String name) {
+        if (Strs.isEmpty(name)) return name;
+        return Character.toLowerCase(name.charAt(0)) + name.substring(1);
+    }
+
+    /**
      * 判断目标字符串是否属于候选字符串数组中的一个
      * <br/>
      * 匹配的字符串非空

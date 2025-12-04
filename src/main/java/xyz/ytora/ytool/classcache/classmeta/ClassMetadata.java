@@ -79,6 +79,13 @@ public class ClassMetadata<T> {
     }
 
     /**
+     * 获取原始字段信息
+     */
+    public Map<String, FieldMetadata> getSourceFieldMap() {
+        return fields;
+    }
+
+    /**
      * 获取当前class的指定字段
      */
     public FieldMetadata getField(String name) {
@@ -87,13 +94,6 @@ public class ClassMetadata<T> {
             throw new ClassCacheException("从【" + sourceClass.getName() + "】类中未找到【" + name + "】字段");
         }
         return field;
-    }
-
-    /**
-     * 获取原始字段信息
-     */
-    public Map<String, FieldMetadata> getSourceFieldMap() {
-        return fields;
     }
 
     /**
@@ -175,7 +175,10 @@ public class ClassMetadata<T> {
      * 收集类的字段
      */
     private void collectFields(Class<?> type) {
-        while (type != null && type != Object.class && type != Record.class) {
+        if (type != null && type != Object.class && type != Record.class) {
+            // 先收集父类字段
+            collectFields(type.getSuperclass());
+
             for (Field field : type.getDeclaredFields()) {
                 try {
                     field.setAccessible(true);
@@ -183,15 +186,16 @@ public class ClassMetadata<T> {
 
                 }
 
-                //子类优先
-                fields.putIfAbsent(field.getName(), new FieldMetadata(this, field));
+                //父类优先
+                fields.put(field.getName(), new FieldMetadata(this, field));
             }
-            type = type.getSuperclass();
         }
     }
 
     private void collectConstructor(Class<?> type) {
-        while (type != null && type != Object.class && type != Record.class) {
+        if (type != null && type != Object.class && type != Record.class) {
+            // 优先收集父类的构造器
+            collectConstructor(type.getSuperclass());
             for (Constructor<?> constructor : type.getDeclaredConstructors()) {
                 try {
                     constructor.setAccessible(true);
@@ -200,14 +204,15 @@ public class ClassMetadata<T> {
                 }
                 String key = buildMethodKey(type.getName(), constructor.getParameterTypes());
                 //子类优先
-                constructors.putIfAbsent(key, new ConstructorMetadata(constructor));
+                constructors.put(key, new ConstructorMetadata(constructor));
             }
-            type = type.getSuperclass();
         }
     }
 
     private void collectMethods(Class<?> type) {
-        while (type != null && type != Object.class && type != Record.class) {
+        if (type != null && type != Object.class && type != Record.class) {
+            // 优先收集父类的方法
+            collectMethods(type.getSuperclass());
             for (Method method : type.getDeclaredMethods()) {
                 try {
                     method.setAccessible(true);
@@ -216,9 +221,8 @@ public class ClassMetadata<T> {
                 }
                 String key = buildMethodKey(method.getName(), method.getParameterTypes());
                 //子类优先
-                methods.putIfAbsent(key, new MethodMetadata(this, method));
+                methods.put(key, new MethodMetadata(this, method));
             }
-            type = type.getSuperclass();
         }
     }
 

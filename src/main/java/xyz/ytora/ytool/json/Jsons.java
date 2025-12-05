@@ -112,8 +112,8 @@ public final class Jsons {
 
     // ----------------------- 内部工具 -----------------------
 
-    private static BaseException wrap(Throwable cause, String msg, Object arg) {
+    private static JsonParseException wrap(Throwable cause, String msg, Object arg) {
         // 包装为 BaseException；保留原始异常栈
-        return new BaseException(cause, msg, arg);
+        return new JsonParseException(cause, msg, arg);
     }
 }

@@ -78,6 +78,10 @@ public class ClassMetadata<T> {
         return simpleName;
     }
 
+    public Class<T> getSourceClass() {
+        return sourceClass;
+    }
+
     /**
      * 获取原始字段信息
      */

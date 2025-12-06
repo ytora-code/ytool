@@ -20,6 +20,32 @@
             <artifactId>cron-utils</artifactId>
             <version>9.2.0</version>
         </dependency>
+
+        <!--poi相关依赖-->
+        <!--核心模块,支持 HSSF:03版本office，xls，doc(部分功能)-->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+        <!--OOXML格式，支持XSSF:07版本office，包含大数据excel写入依赖SXSSF-->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+        <!--支持完整的DOC，和老版本的PPT-->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.18.0</version>
+        </dependency>
     </dependencies>
 
 </project>

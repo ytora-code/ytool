@@ -156,115 +156,130 @@ public class ExcelConfig<T> {
         return sheet;
     }
 
-    public void setSheet(Integer sheet) {
+    public ExcelConfig<T> setSheet(Integer sheet) {
         this.sheet = sheet;
+        return this;
     }
 
     public Integer getHeaderRowIndex() {
         return headerRowIndex;
     }
 
-    public void setHeaderRowIndex(Integer headerRowIndex) {
+    public ExcelConfig<T> setHeaderRowIndex(Integer headerRowIndex) {
         this.headerRowIndex = headerRowIndex;
+        return this;
     }
 
     public Integer getStartRow() {
         return startRow;
     }
 
-    public void setStartRow(Integer startRow) {
+    public ExcelConfig<T> setStartRow(Integer startRow) {
         this.startRow = startRow;
+        return this;
     }
 
     public Integer getStartCol() {
         return startCol;
     }
 
-    public void setStartCol(Integer startCol) {
+    public ExcelConfig<T> setStartCol(Integer startCol) {
         this.startCol = startCol;
+        return this;
     }
 
     public Class<T> getTargetClazz() {
         return targetClazz;
     }
 
-    public void setTargetClazz(Class<T> targetClazz) {
+    public ExcelConfig<T> setTargetClazz(Class<T> targetClazz) {
         this.targetClazz = targetClazz;
+        return this;
     }
 
     public ClassMetadata<T> getClassMetadata() {
         return classMetadata;
     }
 
-    public void setClassMetadata(ClassMetadata<T> classMetadata) {
+    public ExcelConfig<T> setClassMetadata(ClassMetadata<T> classMetadata) {
         this.classMetadata = classMetadata;
+        return this;
     }
 
     public List<ExcelAnnoHandler> getAnnoFields() {
         return annoFields;
     }
 
-    public void setAnnoFields(List<ExcelAnnoHandler> annoFields) {
+    public ExcelConfig<T> setAnnoFields(List<ExcelAnnoHandler> annoFields) {
         this.annoFields = annoFields;
+        return this;
     }
 
     public Map<String, ExcelAnnoHandler> getAnnoHeaderFieldMapper() {
         return annoHeaderFieldMapper;
     }
 
-    public void setAnnoHeaderFieldMapper(Map<String, ExcelAnnoHandler> annoHeaderFieldMapper) {
+    public ExcelConfig<T> setAnnoHeaderFieldMapper(Map<String, ExcelAnnoHandler> annoHeaderFieldMapper) {
         this.annoHeaderFieldMapper = annoHeaderFieldMapper;
+        return this;
     }
 
     public Boolean getHeaderMappingEnabled() {
         return headerMappingEnabled;
     }
 
-    public void setHeaderMappingEnabled(Boolean headerMappingEnabled) {
+    public ExcelConfig<T> setHeaderMappingEnabled(Boolean headerMappingEnabled) {
         this.headerMappingEnabled = headerMappingEnabled;
+        return this;
     }
 
     public ExcelVersion getVersion() {
         return version;
     }
 
-    public void setVersion(ExcelVersion version) {
+    public ExcelConfig<T> setVersion(ExcelVersion version) {
         this.version = version;
+        return this;
     }
 
     public Integer getCount() {
         return count;
     }
 
-    public void setCount(Integer count) {
+    public ExcelConfig<T> setCount(Integer count) {
         this.count = count;
+        return this;
     }
 
     public OutputStream getOut() {
         return out;
     }
 
-    public void setOut(OutputStream out) {
+    public ExcelConfig<T> setOut(OutputStream out) {
         this.out = out;
+        return this;
     }
 
     public Boolean getShowExpertInfo() {
         return showExpertInfo;
     }
 
-    public void setShowExpertInfo(Boolean showExpertInfo) {
+    public ExcelConfig<T> setShowExpertInfo(Boolean showExpertInfo) {
         this.showExpertInfo = showExpertInfo;
+        return this;
     }
 
     public String getExpertUser() {
         return expertUser;
     }
 
-    public void setExpertUser(String expertUser) {
+    public ExcelConfig<T> setExpertUser(String expertUser) {
         this.expertUser = expertUser;
+        return this;
     }
 
-    public void setExpertInfo(String expertInfo) {
+    public ExcelConfig<T> setExpertInfo(String expertInfo) {
         this.expertInfo = expertInfo;
+        return this;
     }
 }

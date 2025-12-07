@@ -1,6 +1,8 @@
 package xyz.ytora.ytool.classcache.classmeta;
 
+import xyz.ytora.ytool.anno.Index;
 import xyz.ytora.ytool.classcache.ClassCacheException;
+import xyz.ytora.ytool.str.Strs;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -58,6 +60,77 @@ public class ClassMetadata<T> {
      * 类方法
      */
     private final Map<String, MethodMetadata> methods = new LinkedHashMap<>();
+
+    /**
+     * 字段排序规则
+     */
+    Comparator<Field> fieldComparator = (f1, f2) -> {
+        // 获取两个字段的 Order 值
+        Index order1 = f1.getAnnotation(Index.class);
+        Index order2 = f2.getAnnotation(Index.class);
+        // 有注解返回注解值，没注解返回 Integer 最大值（排到最后）
+        int v1 = (order1 != null) ? order1.value() : Integer.MAX_VALUE;
+        int v2 = (order2 != null) ? order2.value() : Integer.MAX_VALUE;
+
+        // 1. 先比数值
+        int result = Integer.compare(v1, v2);
+
+        // 2. 数值一样，比字段名字典序（防止顺序随机）
+        if (result == 0) {
+            return f1.getName().compareTo(f2.getName());
+        }
+        return result;
+    };
+
+    List<String> ignoreMethodList = List.of("toString", "equals", "canEqual", "hashCode", "clone");
+    /**
+     * 方法排序规则
+     */
+    Comparator<Method> methodComparator = (m1, m2) -> {
+        // 获取两个字段的 Order 值
+        Index order1 = m1.getAnnotation(Index.class);
+        if (order1 == null) {
+            String name = m1.getName();
+            if (name.startsWith("get") || name.startsWith("set")) {
+                name = Strs.firstLowercase(name.substring(3));
+            } else if (name.startsWith("is")) {
+                name = Strs.firstLowercase(name.substring(2));
+            }
+            try {
+                Field f1 = m1.getDeclaringClass().getDeclaredField(name);
+                order1 = f1.getAnnotation(Index.class);
+            } catch (NoSuchFieldException ignored) {
+            }
+        }
+
+        Index order2 = m2.getAnnotation(Index.class);
+        if (order2 == null) {
+            String name = m2.getName();
+            if (name.startsWith("get") || name.startsWith("set")) {
+                name = Strs.firstLowercase(name.substring(3));
+            } else if (name.startsWith("is")) {
+                name = Strs.firstLowercase(name.substring(2));
+            }
+            try {
+                Field f2 = m2.getDeclaringClass().getDeclaredField(name);
+                order2 = f2.getAnnotation(Index.class);
+            } catch (NoSuchFieldException ignored) {
+            }
+        }
+
+        // 有注解返回注解值，没注解返回 Integer 最大值（排到最后）
+        int v1 = (order1 != null) ? order1.value() : Integer.MAX_VALUE;
+        int v2 = (order2 != null) ? order2.value() : Integer.MAX_VALUE;
+
+        // 1. 先比数值
+        int result = Integer.compare(v1, v2);
+
+        // 2. 数值一样，比字段名字典序（防止顺序随机）
+        if (result == 0) {
+            return m1.getName().compareTo(m2.getName());
+        }
+        return result;
+    };
 
     public ClassMetadata(Class<T> sourceClass) {
         this.sourceClass = sourceClass;
@@ -183,7 +256,11 @@ public class ClassMetadata<T> {
             // 先收集父类字段
             collectFields(type.getSuperclass());
 
-            for (Field field : type.getDeclaredFields()) {
+            Field[] fields = type.getDeclaredFields();
+
+            // 由于getDeclaredFields返回的数组是无序，需要手动排序
+            List<Field> fieldList = Arrays.stream(fields).sorted(fieldComparator).toList();
+            for (Field field : fieldList) {
                 try {
                     field.setAccessible(true);
                 } catch (SecurityException e) {
@@ -191,7 +268,7 @@ public class ClassMetadata<T> {
                 }
 
                 //父类优先
-                fields.put(field.getName(), new FieldMetadata(this, field));
+                this.fields.put(field.getName(), new FieldMetadata(this, field));
             }
         }
     }
@@ -217,7 +294,12 @@ public class ClassMetadata<T> {
         if (type != null && type != Object.class && type != Record.class) {
             // 优先收集父类的方法
             collectMethods(type.getSuperclass());
-            for (Method method : type.getDeclaredMethods()) {
+            Method[] methods = type.getDeclaredMethods();
+            List<Method> methodList = Arrays.stream(methods)
+                    .filter(i -> !ignoreMethodList.contains(i.getName()))
+                    .sorted(methodComparator)
+                    .toList();
+            for (Method method : methodList) {
                 try {
                     method.setAccessible(true);
                 } catch (SecurityException e) {
@@ -225,7 +307,7 @@ public class ClassMetadata<T> {
                 }
                 String key = buildMethodKey(method.getName(), method.getParameterTypes());
                 //子类优先
-                methods.put(key, new MethodMetadata(this, method));
+                this.methods.put(key, new MethodMetadata(this, method));
             }
         }
     }
@@ -240,5 +322,11 @@ public class ClassMetadata<T> {
             sj.add(realType.getName());
         }
         return methodName + "(" + sj + ")";
+    }
+
+    private static int getOrderValue(Field field) {
+        Index order = field.getAnnotation(Index.class);
+        // 有注解返回注解值，没注解返回 Integer 最大值（排到最后）
+        return (order != null) ? order.value() : Integer.MAX_VALUE;
     }
 }

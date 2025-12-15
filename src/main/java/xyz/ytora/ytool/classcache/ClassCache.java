@@ -5,6 +5,7 @@ import xyz.ytora.ytool.classcache.classmeta.ConstructorMetadata;
 import xyz.ytora.ytool.classcache.classmeta.FieldMetadata;
 import xyz.ytora.ytool.classcache.classmeta.MethodMetadata;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ClassCache {
 
     private static final Map<String, ClassMetadata<?>> cache = new ConcurrentHashMap<>();
+    private static final Map<Method, MethodMetadata> methodCache = new ConcurrentHashMap<>();
 
     /**
      * 获取原始缓存
@@ -106,6 +108,24 @@ public class ClassCache {
             classMetadata = put(type);
         }
         return classMetadata.getMethod(methodName, paramTypes);
+    }
+
+    /**
+     * 根据 Method 获取 MethodMetadata
+     */
+    public static <T> MethodMetadata getMethod(Method method) {
+        MethodMetadata methodMetadata = methodCache.get(method);
+        if (methodMetadata != null) {
+            return methodMetadata;
+        }
+        ClassMetadata<?> cmd = get(method.getDeclaringClass());
+        for (MethodMetadata mmd : cmd.getMethods()) {
+            if (mmd.getOriginMethod().equals(method)) {
+                methodCache.put(method, mmd);
+                return mmd;
+            }
+        }
+        return null;
     }
 
 }

@@ -24,7 +24,7 @@ import xyz.ytora.ytool.id.IdGenerator;
 public final class SnowflakeId implements IdGenerator<Long> {
 
     /** 默认纪元：2025-08-10 00:00:00 UTC 的毫秒值 */
-    public static final long DEFAULT_EPOCH = 1754755200000L;
+    public static final long DEFAULT_EPOCH = 1766851200000L;
 
     // 位宽定义（可改为构造参数，这里用 Twitter 经典值）
     private static final long WORKER_ID_BITS = 3L;   // 工作节点 0~8

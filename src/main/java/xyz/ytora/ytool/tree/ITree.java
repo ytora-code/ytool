@@ -4,7 +4,6 @@ import java.util.List;
 
 /**
  * 树形数据规范
- * 要求，
  */
 public interface ITree<T> {
     /**

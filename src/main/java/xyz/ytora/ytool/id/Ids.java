@@ -3,6 +3,9 @@ package xyz.ytora.ytool.id;
 import xyz.ytora.ytool.id.support.LocalIdGenerator;
 import xyz.ytora.ytool.id.support.SnowflakeId;
 import xyz.ytora.ytool.id.support.ULID;
+import xyz.ytora.ytool.id.support.UuidGenerator;
+
+import java.util.UUID;
 
 /**
  * created by yangtong on 2025/8/9 21:51:05
@@ -17,6 +20,11 @@ public class Ids {
     private static final IdGenerator<Long> snowflakeId = new SnowflakeId(0, 0);
 
     /**
+     * 使用UUID产生ID
+     */
+    private static final IdGenerator<String> uuid = new UuidGenerator();
+
+    /**
      * 使用ULID产生ID
      */
     private static final IdGenerator<String> ulid = new ULID();
@@ -26,9 +34,28 @@ public class Ids {
      */
     private static final IdGenerator<Long> localId = new LocalIdGenerator();
 
+    public static IdGenerator<Long> getSnowflakeId() {
+        return snowflakeId;
+    }
+
+    public static IdGenerator<String> getUuid() {
+        return uuid;
+    }
+
+    public static IdGenerator<String> getUlid() {
+        return ulid;
+    }
+
+    public static IdGenerator<Long> getLocalId() {
+        return localId;
+    }
 
     public static Long snowflakeId() {
         return snowflakeId.nextId();
+    }
+
+    public static String uuid() {
+        return uuid.nextId();
     }
 
     public static String ulid() {

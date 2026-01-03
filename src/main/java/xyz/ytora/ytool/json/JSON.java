@@ -2,12 +2,12 @@ package xyz.ytora.ytool.json;
 
 import xyz.ytora.ytool.convert.Converts;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * JSON 对象
  */
-public class JSON extends HashMap<String, Object> {
+public class JSON extends LinkedHashMap<String, Object> {
 
     public JSON(Integer size) {
         super(size);

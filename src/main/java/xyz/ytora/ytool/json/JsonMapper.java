@@ -701,6 +701,7 @@ public class JsonMapper {
     }
 
     private Map<String, Object> newMap(Class<? extends Map> raw) {
+        if (raw == JSON.class) return new JSON(16);
         if (raw == Map.class || raw == LinkedHashMap.class) return new LinkedHashMap<>();
         if (raw == HashMap.class) return new HashMap<>();
         if (raw == TreeMap.class) return new TreeMap<>();

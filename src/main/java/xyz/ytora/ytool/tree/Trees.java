@@ -18,34 +18,33 @@ public class Trees {
      * @param <T> 目标数据元素类型
      */
     public static <T extends ITree<T>> List<T> toTree(List<T> items) {
-        //将list映射成map
-        Map<String, T> nodeMap = items.stream().collect(Collectors.toMap(ITree::getId, Function.identity()));
-        //存储所有顶层节点
-        List<T> roots = new ArrayList<>();
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-        //给每一个元素找父亲
+        // 1. 建立 ID 映射表
+        Map<String, T> nodeMap = items.stream()
+                .collect(Collectors.toMap(ITree::getId, Function.identity(), (k1, k2) -> k1));
+
+        // 2. 第一轮遍历：【初始化】状态
         for (T item : items) {
-            //如果是根节点，直接加入roots
-            if ("0".equals(item.getPid()) || item.getPid() == null) {
-                roots.add(item);
-            }
-            //非根节点，则寻找其父节点并进行挂载
-            else {
-                T parent = nodeMap.get(item.getPid());
-                //父节点存在，直接挂载
-                if (parent != null) {
-                    if (parent.getChildren() == null) {
-                        parent.setChildren(new ArrayList<>());
-                    }
-                    parent.getChildren().add(item);
+            item.setChildren(new ArrayList<>());
+            item.hasChildren(false);
+        }
 
-                    parent.hasChildren(true);
-                }
-                //如果父节点不存在，则忽略
-                else {
-                    //roots.add(item);
-                    // log.warn("节点【{}】未找到父节点【{}】,将被忽略", item, item.getPid());
-                }
+        // 3. 第二轮遍历：【组装】父子关系
+        List<T> roots = new ArrayList<>();
+        for (T item : items) {
+            String pid = item.getPid();
+            T parent = nodeMap.get(pid);
+
+            // 如果没有父节点，说明它是当前数据集中的顶级节点
+            if (pid == null || "0".equals(pid) || parent == null) {
+                roots.add(item);
+            } else {
+                // 此时 parent.getChildren() 已经在第一步初始化过了，直接添加即可
+                parent.getChildren().add(item);
+                parent.hasChildren(true);
             }
         }
 

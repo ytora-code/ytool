@@ -12,12 +12,12 @@ import java.util.stream.Collectors;
 public class Colls {
 
     /**
-     * 经过条件筛选后，获取容器内唯一一个元素
+     * 经过条件筛选后，获取集合内唯一一个元素
      */
     public static <T> Optional<T> one(Collection<T> collection, Predicate<T> predicate) {
         List<T> candidateItem = collection.stream().filter(predicate).toList();
         if (candidateItem.size() > 1) {
-            throw new CollectionException("期待容器集合" + collection + "只有一个元素，但是实际发现了" + candidateItem.size() + "个");
+            throw new CollectionException("期待集合集合" + collection + "只有一个元素，但是实际发现了" + candidateItem.size() + "个");
         } else if (candidateItem.size() == 1) {
             return Optional.of(candidateItem.get(0));
         }
@@ -25,17 +25,60 @@ public class Colls {
     }
 
     /**
-     * 判断容器是否为空
+     * 判断集合是否为空
      */
     public static <T> Boolean isEmpty(Collection<T> collection) {
         return collection == null || collection.isEmpty();
     }
 
     /**
-     * 判断容器是否为空
+     * 判断集合是否为空
      */
     public static <T> Boolean isNotEmpty(Collection<T> collection) {
         return !isEmpty(collection);
+    }
+
+    /**
+     * 判断两个集合是否相等
+     * 两个集合元素个数一致，并且两个集合内部元素全都相同，视为集合相同
+     * 顺序可以不一致
+     */
+    public static <T> Boolean equals(Collection<T> a, Collection<T> b) {
+        // 同一引用，必然相等
+        if (a == b) {
+            return true;
+        }
+
+        // 任意一个为 null，另一个不为 null
+        if (a == null || b == null) {
+            return false;
+        }
+
+        // 元素数量不同，直接不相等
+        if (a.size() != b.size()) {
+            return false;
+        }
+
+        // 统计 a 中每个元素出现次数
+        Map<T, Integer> countMap = new HashMap<>();
+        for (T t : a) {
+            countMap.put(t, countMap.getOrDefault(t, 0) + 1);
+        }
+
+        // 用 b 来抵消次数
+        for (T t : b) {
+            Integer count = countMap.get(t);
+            if (count == null) {
+                return false;
+            }
+            if (count == 1) {
+                countMap.remove(t);
+            } else {
+                countMap.put(t, count - 1);
+            }
+        }
+
+        return countMap.isEmpty();
     }
 
     /**

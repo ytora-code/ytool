@@ -28,7 +28,7 @@ public class Trees {
 
         // 2. 第一轮遍历：【初始化】状态
         for (T item : items) {
-            item.setChildren(new ArrayList<>());
+            // item.setChildren(new ArrayList<>());
             item.hasChildren(false);
         }
 
@@ -43,6 +43,9 @@ public class Trees {
                 roots.add(item);
             } else {
                 // 此时 parent.getChildren() 已经在第一步初始化过了，直接添加即可
+                if (parent.getChildren() == null) {
+                    parent.setChildren(new ArrayList<>());
+                }
                 parent.getChildren().add(item);
                 parent.hasChildren(true);
             }

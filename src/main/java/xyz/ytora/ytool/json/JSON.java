@@ -9,6 +9,10 @@ import java.util.LinkedHashMap;
  */
 public class JSON extends LinkedHashMap<String, Object> {
 
+    public JSON() {
+        super(16);
+    }
+
     public JSON(Integer size) {
         super(size);
     }

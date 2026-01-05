@@ -18,6 +18,17 @@ public class Trees {
      * @param <T> 目标数据元素类型
      */
     public static <T extends ITree<T>> List<T> toTree(List<T> items) {
+        return toTree(items, (NodeVisitor<T>)null);
+    }
+
+    /**
+     * 将目标数据变成具有层级的数组结构
+     * @param items 目标数据
+     * @return 树状数据
+     * @param visitor 回调函数
+     * @param <T> 目标数据元素类型
+     */
+    public static <T extends ITree<T>> List<T> toTree(List<T> items, NodeVisitor<T> visitor) {
         if (items == null || items.isEmpty()) {
             return new ArrayList<>();
         }
@@ -51,6 +62,12 @@ public class Trees {
             }
         }
 
+        // 4. 回调：按层级遍历树
+        if (visitor != null) {
+            for (T root : roots) {
+                walk(root, null, 0, visitor);
+            }
+        }
         return roots;
     }
 
@@ -62,8 +79,20 @@ public class Trees {
      * @param <T> 目标数据元素类型
      */
     public static <T extends ITree<T>> List<T> toTree(List<T> items, String key) {
+        return toTree(items, key, (NodeVisitor<T>)null);
+    }
+
+    /**
+     * 根据关键字key搜索树
+     * @param items 目标数据
+     * @param key 关键字
+     * @param visitor 回调函数
+     * @return 树状数据
+     * @param <T> 目标数据元素类型
+     */
+    public static <T extends ITree<T>> List<T> toTree(List<T> items, String key, NodeVisitor<T> visitor) {
         if (key == null) {
-            return toTree(items);
+            return toTree(items, visitor);
         }
 
         Map<String, T> nodeMap = items.stream().collect(Collectors.toMap(ITree::getId, Function.identity()));
@@ -89,6 +118,19 @@ public class Trees {
             }
         }
 
-        return toTree(new ArrayList<>(resultNodes));
+        // 用过滤后的节点再组树
+        return toTree(new ArrayList<>(resultNodes), visitor);
     }
+
+    public static <T extends ITree<T>> void walk(T node, T parent, int level, NodeVisitor<T> visitor) {
+        visitor.accept(level, node, parent);
+
+        List<T> children = node.getChildren();
+        if (children == null || children.isEmpty()) return;
+
+        for (T child : children) {
+            walk(child, node, level + 1, visitor);
+        }
+    }
+
 }

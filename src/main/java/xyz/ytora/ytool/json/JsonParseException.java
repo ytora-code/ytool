@@ -16,6 +16,7 @@ public class JsonParseException extends RuntimeException {
     }
 
     public JsonParseException(Throwable throwable, String message, Object... params) {
+        super(throwable);
         this.message = Strs.format(message, params);
     }
 }

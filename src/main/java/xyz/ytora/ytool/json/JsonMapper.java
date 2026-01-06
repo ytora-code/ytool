@@ -42,7 +42,8 @@ public class JsonMapper {
         registry.register(LocalDateTime.class, new LocalDateTimeConverter());
         registry.register(Date.class, new DateConverter());
         // 带泛型的List类型：List<String>
-        registry.register(new TypeRef<List<String>>() { }, new ListOfStringCsvConverter());
+        registry.register(new TypeRef<List<String>>() {
+        }, new ListOfStringCsvConverter());
 
         JsonConfig config = JsonConfig.builder()
                 .lenient(true)
@@ -55,6 +56,8 @@ public class JsonMapper {
     public JsonMapper(JsonConfig config) {
         this.config = Objects.requireNonNull(config, "config");
     }
+
+    private final ThreadLocal<Deque<String>> pathTL = ThreadLocal.withInitial(LinkedList::new);
 
     /* ====================== 公共 API ====================== */
 
@@ -71,31 +74,76 @@ public class JsonMapper {
      * 反序列化 json -> pojo
      */
     public <T> T fromJson(String json, Class<T> type) {
+        clearPath();
         JsonReader r = new JsonReader(json, config.lenient());
-        r.next();
-        @SuppressWarnings("unchecked")
-        T v = (T) readValue(type, r);
-        return v;
+        try {
+            r.next();
+            @SuppressWarnings("unchecked")
+            T v = (T) readValue(type, r);
+            return v;
+        } catch (RuntimeException ex) {
+            // 已经是“字段解析失败”就直接抛
+            if (ex instanceof JsonParseException) {
+                String m = ex.getMessage();
+                if (m != null && m.startsWith("字段解析失败:")) {
+                    throw ex;
+                }
+            }
+            // 否则再 enrich（例如顶层 json 根本不是对象之类）
+            throw enrichTypeMismatch(ex, r, type);
+        } finally {
+            clearPath();
+        }
     }
 
     /**
      * 反序列化 json -> pojo
      */
     public Object fromJson(String json, Type type) {
-        JsonReader r = new JsonReader(json, config.lenient());
-        r.next();
-        return readValue(type, r);
+        clearPath();
+        JsonReader r = new JsonReader(json, this.config.lenient());
+        try {
+            r.next();
+            return this.readValue(type, r);
+        } catch (RuntimeException ex) {
+            // 已经是“字段解析失败”就直接抛
+            if (ex instanceof JsonParseException) {
+                String m = ex.getMessage();
+                if (m != null && m.startsWith("字段解析失败:")) {
+                    throw ex;
+                }
+            }
+            // 否则再 enrich（例如顶层 json 根本不是对象之类）
+            throw enrichTypeMismatch(ex, r, type);
+        } finally {
+            clearPath();
+        }
     }
 
     /**
      * 带泛型的反序列化 json -> pojo
      */
     public <T> T fromJson(String json, TypeRef<T> ref) {
-        JsonReader r = new JsonReader(json, config.lenient());
-        r.next();
-        @SuppressWarnings("unchecked")
-        T v = (T) readValue(ref.type(), r);
-        return v;
+        clearPath();
+        JsonReader r = new JsonReader(json, this.config.lenient());
+        try {
+            r.next();
+            @SuppressWarnings("unchecked")
+            T v = (T) this.readValue(ref.type(), r);
+            return v;
+        } catch (RuntimeException ex) {
+            // 已经是“字段解析失败”就直接抛
+            if (ex instanceof JsonParseException) {
+                String m = ex.getMessage();
+                if (m != null && m.startsWith("字段解析失败:")) {
+                    throw ex;
+                }
+            }
+            // 否则再 enrich（例如顶层 json 根本不是对象之类）
+            throw enrichTypeMismatch(ex, r, ref.type());
+        } finally {
+            clearPath();
+        }
     }
 
     /* ====================== 上下文实现 ====================== */
@@ -451,6 +499,7 @@ public class JsonMapper {
     // —— 标量 —— //
     private String readString(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return null;
+        if (r.token() == JsonToken.VALUE_NUMBER) return r.isDoubleNumber() ? String.valueOf(r.doubleVal()) : String.valueOf(r.longVal());
         if (r.token() != JsonToken.VALUE_STRING) throw error("期望字符串，实际: " + r.token());
         return r.string();
     }
@@ -463,30 +512,35 @@ public class JsonMapper {
 
     private int readInt(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return 0;
+        if (r.token() == JsonToken.VALUE_STRING) return Integer.parseInt(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(int)");
         return r.isDoubleNumber() ? (int) r.doubleVal() : (int) r.longVal();
     }
 
     private long readLong(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return 0L;
+        if (r.token() == JsonToken.VALUE_STRING) return Long.parseLong(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(long)");
         return r.isDoubleNumber() ? (long) r.doubleVal() : r.longVal();
     }
 
     private double readDouble(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return 0d;
+        if (r.token() == JsonToken.VALUE_STRING) return Double.parseDouble(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(double)");
         return r.isDoubleNumber() ? r.doubleVal() : (double) r.longVal();
     }
 
     private float readFloat(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return 0f;
+        if (r.token() == JsonToken.VALUE_STRING) return Float.parseFloat(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(float)");
         return r.isDoubleNumber() ? (float) r.doubleVal() : (float) r.longVal();
     }
 
     private short readShort(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return 0;
+        if (r.token() == JsonToken.VALUE_STRING) return Short.parseShort(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(short)");
         return r.isDoubleNumber() ? (short) r.doubleVal() : (short) r.longVal();
     }
@@ -499,6 +553,7 @@ public class JsonMapper {
 
     private BigInteger readBigInteger(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return null;
+        if (r.token() == JsonToken.VALUE_STRING) return new BigInteger(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(BigInteger)");
         if (r.isDoubleNumber()) return BigDecimal.valueOf(r.doubleVal()).toBigInteger();
         return BigInteger.valueOf(r.longVal());
@@ -506,6 +561,7 @@ public class JsonMapper {
 
     private BigDecimal readBigDecimal(JsonReader r) {
         if (r.token() == JsonToken.VALUE_NULL) return null;
+        if (r.token() == JsonToken.VALUE_STRING) return new BigDecimal(r.string());
         if (r.token() != JsonToken.VALUE_NUMBER) throw error("期望数字(BigDecimal)");
         return r.isDoubleNumber() ? BigDecimal.valueOf(r.doubleVal()) : BigDecimal.valueOf(r.longVal());
     }
@@ -521,87 +577,171 @@ public class JsonMapper {
 
     // —— 结构 —— //
     private Object readArray(Class<?> compType, JsonReader r) {
-        if (r.token() == JsonToken.VALUE_NULL) return null;
-        if (r.token() != JsonToken.START_ARRAY) throw error("期望数组开始");
-        List<Object> tmp = new ArrayList<>();
-        for (JsonToken t = r.next(); ; t = r.next()) {
-            if (t == JsonToken.END_ARRAY || t == JsonToken.EOF) break;
-            tmp.add(readCtx().readValue(compType, r));
+        if (r.token() == JsonToken.VALUE_NULL) {
+            return null;
+        } else if (r.token() != JsonToken.START_ARRAY) {
+            throw error("期望数组开始");
+        } else {
+            List<Object> tmp = new ArrayList<>();
+            int idx = 0;
+
+            for (JsonToken t = r.next(); t != JsonToken.END_ARRAY && t != JsonToken.EOF; t = r.next()) {
+                String seg = "[" + idx + "]";
+                pushPath(seg);
+                try {
+                    try {
+                        tmp.add(this.readCtx().readValue(compType, r));
+                    } catch (RuntimeException ex) {
+                        throw enrichTypeMismatch(ex, r, compType);
+                    }
+                } finally {
+                    popPath();
+                }
+                idx++;
+            }
+
+            Object arr = Array.newInstance(compType, tmp.size());
+            for (int i = 0; i < tmp.size(); ++i) {
+                Array.set(arr, i, tmp.get(i));
+            }
+            return arr;
         }
-        Object arr = Array.newInstance(compType, tmp.size());
-        for (int i = 0; i < tmp.size(); i++) Array.set(arr, i, tmp.get(i));
-        return arr;
     }
+
 
     private Collection<?> readCollection(Class<? extends Collection> raw, Type elemType, JsonReader r) {
-        if (r.token() == JsonToken.VALUE_NULL) return null;
-        if (r.token() != JsonToken.START_ARRAY) throw error("期望数组开始");
-        Collection<Object> coll = newCollection(raw);
-        for (JsonToken t = r.next(); ; t = r.next()) {
-            if (t == JsonToken.END_ARRAY || t == JsonToken.EOF) break;
-            coll.add(readCtx().readValue(elemType, r));
+        if (r.token() == JsonToken.VALUE_NULL) {
+            return null;
+        } else if (r.token() != JsonToken.START_ARRAY) {
+            throw error("期望数组开始");
+        } else {
+            Collection<Object> coll = this.newCollection(raw);
+            int idx = 0;
+
+            for (JsonToken t = r.next(); t != JsonToken.END_ARRAY && t != JsonToken.EOF; t = r.next()) {
+                String seg = "[" + idx + "]";
+                pushPath(seg);
+                try {
+                    try {
+                        coll.add(this.readCtx().readValue(elemType, r));
+                    } catch (RuntimeException ex) {
+                        throw enrichTypeMismatch(ex, r, elemType);
+                    }
+                } finally {
+                    popPath();
+                }
+                idx++;
+            }
+
+            return coll;
         }
-        return coll;
     }
+
 
     private Map<?, ?> readMap(Class<? extends Map> raw, Type vType, JsonReader r) {
-        if (r.token() == JsonToken.VALUE_NULL) return null;
-        if (r.token() != JsonToken.START_OBJECT) throw error("期望对象开始");
-        Map<String, Object> map = newMap(raw);
-        for (JsonToken t = r.next(); ; t = r.next()) {
-            if (t == JsonToken.END_OBJECT || t == JsonToken.EOF) break;
-            if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) throw error("期望字段名");
-            String key = r.string();
-            t = r.next();
-            if (t == JsonToken.EOF) break;
-            map.put(key, readCtx().readValue(vType, r));
+        if (r.token() == JsonToken.VALUE_NULL) {
+            return null;
+        } else if (r.token() != JsonToken.START_OBJECT) {
+            throw error("期望对象开始");
+        } else {
+            Map<String, Object> map = this.newMap(raw);
+
+            for (JsonToken t = r.next(); t != JsonToken.END_OBJECT && t != JsonToken.EOF; t = r.next()) {
+                if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) {
+                    throw error("期望字段名");
+                }
+
+                String key = r.string();
+                t = r.next();
+                if (t == JsonToken.EOF) {
+                    break;
+                }
+
+                pushPath(key);
+                try {
+                    try {
+                        map.put(key, this.readCtx().readValue(vType, r));
+                    } catch (RuntimeException ex) {
+                        throw enrichTypeMismatch(ex, r, vType);
+                    }
+                } finally {
+                    popPath();
+                }
+            }
+
+            return map;
         }
-        return map;
     }
 
+
     private <T> T bindPojo(Class<T> cls, JsonReader r) {
-        if (r.token() == JsonToken.VALUE_NULL) return null;
-        if (r.token() != JsonToken.START_OBJECT) throw error("期望对象开始, 实际却读到:" + r.token());
+        if (r.token() == JsonToken.VALUE_NULL) {
+            return null;
+        } else if (r.token() != JsonToken.START_OBJECT) {
+            throw error("期望对象开始, 实际却读到:" + r.token());
+        } else {
+            ClassMetadata<T> classMetadata = ClassCache.get(cls);
 
-        // 获取类元缓存
-        ClassMetadata<T> classMetadata = ClassCache.get(cls);
-        final T bean;
-        try {
-            ConstructorMetadata<T> constructor = classMetadata.getConstructor();
-            bean = constructor.instance();
-        } catch (Exception e) {
-            throw error("实例化失败: " + e.getMessage());
-        }
-
-        Map<String, MethodMetadata> setters = findSetters(cls, classMetadata);
-        ConverterRegistry registry = config.converters();
-
-        for (JsonToken t = r.next(); ; t = r.next()) {
-            if (t == JsonToken.END_OBJECT || t == JsonToken.EOF) break;
-            if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) throw error("期望字段名");
-            String key = r.string();
-
-            t = r.next();
-            if (t == JsonToken.EOF) break;
-
-            MethodMetadata setter = config.setterFinder(key, setters);
-            if (setter == null) {
-                skipValue(r);
-                continue;
-            }
-
-            Type paramType = setter.genericParameterTypes()[0];
-
-            // 将JSON字段的值绑定到POJO（通过setter）
-            JsonTypeConverter<Object> cv = cast(registry.lookup(paramType));
-            Object arg = (cv != null) ? cv.read(r, paramType, readCtx()) : readCtx().readValue(paramType, r);
+            T bean;
             try {
-                setter.invoke(bean, arg);
+                ConstructorMetadata<T> constructor = classMetadata.getConstructor(new Class[0]);
+                bean = (T) constructor.instance(new Object[0]);
             } catch (Exception e) {
-                throw error("调用 setter 失败: " + setter.getName() + " -> " + e.getMessage());
+                throw error("实例化失败: " + e.getMessage());
             }
+
+            Map<String, MethodMetadata> setters = this.findSetters(cls, classMetadata);
+            ConverterRegistry registry = this.config.converters();
+
+            for (JsonToken t = r.next(); t != JsonToken.END_OBJECT && t != JsonToken.EOF; t = r.next()) {
+                if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) {
+                    throw error("期望字段名");
+                }
+
+                String key = r.string();
+                t = r.next();
+                if (t == JsonToken.EOF) {
+                    break;
+                }
+
+                MethodMetadata setter = this.config.setterFinder(key, setters);
+                if (setter == null) {
+                    // 未知字段：也 push 一下路径，方便 skip 出错时定位（可选但推荐）
+                    pushPath(key);
+                    try {
+                        this.skipValue(r);
+                    } finally {
+                        popPath();
+                    }
+                    continue;
+                }
+
+                pushPath(key);
+                try {
+                    Type paramType = setter.genericParameterTypes()[0];
+                    JsonTypeConverter<Object> cv = cast(registry.lookup(paramType));
+
+                    Object arg;
+                    try {
+                        arg = (cv != null)
+                                ? cv.read(r, paramType, this.readCtx())
+                                : this.readCtx().readValue(paramType, r);
+                    } catch (RuntimeException ex) {
+                        throw enrichTypeMismatch(ex, r, paramType);
+                    }
+
+                    try {
+                        setter.invoke(bean, new Object[]{arg});
+                    } catch (Exception e) {
+                        throw error("调用 setter 失败: " + setter.getName() + " @ " + currentPath() + " -> " + e.getMessage());
+                    }
+                } finally {
+                    popPath();
+                }
+            }
+
+            return bean;
         }
-        return bean;
     }
 
     private <T> Map<String, MethodMetadata> findSetters(Class<?> c, ClassMetadata<T> classMetadata) {
@@ -744,7 +884,15 @@ public class JsonMapper {
 
     // 顶层动态
     private Object readAny(JsonReader r) {
-        switch (r.token()) {
+        JsonToken tk = r.token();
+        if (tk == null) {
+            tk = r.next();
+            if (tk == null) {
+                throw error("EOF");
+            }
+        }
+
+        switch (tk) {
             case VALUE_NULL:
                 return null;
             case VALUE_STRING:
@@ -765,23 +913,58 @@ public class JsonMapper {
             }
             case START_ARRAY: {
                 List<Object> arr = new ArrayList<>();
-                for (JsonToken t = r.next(); t != JsonToken.END_ARRAY; t = r.next()) arr.add(readAny(r));
+                // 进入数组后，推进到第一个元素或 END_ARRAY
+                JsonToken t = r.next();
+                while (t != JsonToken.END_ARRAY && t != JsonToken.EOF) {
+                    // 当前 token 就是元素起始 token，readAny 负责消费整个元素
+                    arr.add(readAny(r));
+                    // 消费完一个元素后，推进到下一个元素起始或 END_ARRAY
+                    t = r.next();
+                }
+                if (t == JsonToken.EOF) {
+                    throw error("数组未闭合: 缺少 ']'");
+                }
                 return arr;
             }
             case START_OBJECT: {
                 Map<String, Object> map = new LinkedHashMap<>();
-                for (JsonToken t = r.next(); t != JsonToken.END_OBJECT; t = r.next()) {
-                    if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) throw error("期望字段名");
+                // 进入对象后，推进到 FIELD_NAME 或 END_OBJECT
+                JsonToken t = r.next();
+                while (t != JsonToken.END_OBJECT && t != JsonToken.EOF) {
+                    if (t != JsonToken.FIELD_NAME && t != JsonToken.VALUE_STRING) {
+                        throw error("期望字段名");
+                    }
                     String k = r.string();
-                    r.next();
-                    map.put(k, readAny(r));
+
+                    // 推进到 value token
+                    t = r.next();
+                    if (t == JsonToken.EOF) {
+                        throw error("对象未闭合: 缺少 '}'");
+                    }
+
+                    pushPath(k);
+                    try {
+                        // 当前 token 就是 value 起始 token
+                        map.put(k, readAny(r));
+                    } finally {
+                        popPath();
+                    }
+
+                    // 消费完 value 后，推进到下一个 FIELD_NAME 或 END_OBJECT
+                    t = r.next();
+                }
+                if (t == JsonToken.EOF) {
+                    throw error("对象未闭合: 缺少 '}'");
                 }
                 return map;
             }
+            case EOF:
+                throw error("EOF");
             default:
                 throw error("未知 token: " + r.token());
         }
     }
+
 
     static boolean isPlatformClass(Class<?> c) {
         if (c == null) return false;
@@ -793,4 +976,73 @@ public class JsonMapper {
                 || n.startsWith("sun.")
                 || n.startsWith("com.sun.");
     }
+
+    private void clearPath() {
+        Deque<String> st = pathTL.get();
+        st.clear();
+    }
+
+    private void pushPath(String p) {
+        pathTL.get().addLast(p);
+    }
+
+    private void popPath() {
+        Deque<String> st = pathTL.get();
+        if (!st.isEmpty()) {
+            st.removeLast();
+        }
+    }
+
+    private String currentPath() {
+        Deque<String> st = pathTL.get();
+        if (st.isEmpty()) {
+            return "$";
+        }
+        StringBuilder sb = new StringBuilder("$");
+        for (String seg : st) {
+            if (seg == null || seg.isEmpty()) continue;
+            // seg 若是 "[0]" 这种索引就直接拼，否则按 .field 拼
+            if (seg.charAt(0) == '[') {
+                sb.append(seg);
+            } else {
+                sb.append('.').append(seg);
+            }
+        }
+        return sb.toString();
+    }
+
+    private RuntimeException enrichTypeMismatch(RuntimeException ex, JsonReader r, Type expectedType) {
+        // 关键：已经是我们自己的 JsonParseException（比如 $.email 那层），不要再包装
+        if (ex instanceof JsonParseException) {
+            String m = ex.getMessage();
+            if (m != null && m.startsWith("字段解析失败:")) {
+                return ex;
+            }
+        }
+
+        JsonToken tk = r.token();
+        String actual = (tk == null) ? "null" : (tk + "(" + r.tokenValuePreview() + ")");
+
+        String near = "";
+        try {
+            near = r.near(60);
+            if (near != null) {
+                near = near.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+            }
+        } catch (Exception ignore) {
+        }
+
+        String msg =
+                "字段解析失败: " + currentPath()
+                        + "\n期望: " + String.valueOf(expectedType)
+                        + "\n实际: " + actual
+                        + "\n@ pos " + r.pos()
+                        + "\nnear: " + near;
+
+        JsonParseException npe = new JsonParseException(msg);
+        npe.initCause(ex);
+        return npe;
+    }
+
+
 }

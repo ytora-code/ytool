@@ -400,6 +400,34 @@ public final class JsonReader {
         }
     }
 
+    public int pos() {
+        return this.cur;
+    }
+
+    /**
+     * 附近片段，便于定位
+     */
+    public String near(int radius) {
+        int start = Math.max(0, this.cur - radius);
+        int end = Math.min(this.length, this.cur + radius);
+        return new String(this.buf, start, end - start);
+    }
+
+    /**
+     * 用于错误信息：把当前 token 的“值”也打印出来
+     */
+    public String tokenValuePreview() {
+        if (this.token == null) return "null";
+        return switch (this.token) {
+            case VALUE_STRING, FIELD_NAME -> this.str == null ? "null" : ("\"" + this.str + "\"");
+            case VALUE_NUMBER -> this.numIsDouble ? String.valueOf(this.doubleVal) : String.valueOf(this.longVal);
+            case VALUE_BOOLEAN -> String.valueOf(this.boolVal);
+            case VALUE_NULL -> "null";
+            default -> this.token.name();
+        };
+    }
+
+
     private JsonParseException error(String msg) {
         return new JsonParseException(msg + " @ pos " + cur);
     }

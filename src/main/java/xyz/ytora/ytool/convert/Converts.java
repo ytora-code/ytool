@@ -11,7 +11,7 @@ public class Converts {
     private static final DefaultConversionService conversionService;
 
     static {
-        String basePackage = "org.ytor.common.util.convert.converters";
+        String basePackage = Converts.class.getPackage().getName() + ".converters";
         conversionService = DefaultConversionService.init(basePackage);
     }
 

@@ -48,7 +48,7 @@ public class DefaultExcelWriter<T> implements IExcelWriter<T> {
         //Excel文件版本
         ExcelVersion version = excelAnno == null ? excelConfig.getVersion() : excelAnno.version();
         //写入的sheet名称
-        String sheetName = excelAnno == null ? classMetadata.getSourceClass().getSimpleName() : excelAnno.value();
+        String sheetName = excelAnno == null ? classMetadata.getSourceClass().getSimpleName() : excelAnno.fileName();
 
         //获取表头信息
         List<FieldMetadata> fieldMetadataList = classMetadata.getFields(f -> f.hasAnnotation(Excel.class)).stream()

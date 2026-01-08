@@ -1,5 +1,7 @@
 package xyz.ytora.ytool.tree;
 
+import xyz.ytora.ytool.coll.Colls;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -10,6 +12,28 @@ import java.util.stream.Collectors;
 public class Trees {
 
     // private static final Logger log = LoggerFactory.getLogger(Trees.class);
+
+    /**
+     * 将树形结构扁平化
+     * @param tree 树形数据
+     * @return 扁平化后的列表
+     */
+    public static <T extends ITree<T>> List<T> flattenTree(List<T> tree) {
+        List<T> result = new ArrayList<>();
+        if (tree == null) {
+            return result;
+        }
+        for (T node : tree) {
+            // 加入当前节点
+            result.add(node);
+            if (Colls.isNotEmpty(node.getChildren())) {
+                flattenTree(node.getChildren());
+            }
+            // 将当前阶段children置空
+            node.setChildren(null);
+        }
+        return result;
+    }
 
     /**
      * 将目标数据变成具有层级的数组结构

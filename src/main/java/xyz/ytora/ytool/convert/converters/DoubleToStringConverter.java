@@ -12,7 +12,9 @@ public class DoubleToStringConverter implements Converter<Double, String> {
     @Override
     public String convert(Double source) {
         if (source == null) return null;
-        return BigDecimal.valueOf(source).toPlainString();
+        return BigDecimal.valueOf(source)
+                .stripTrailingZeros()
+                .toPlainString();
     }
 
     @Override

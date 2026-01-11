@@ -204,7 +204,9 @@ public class FileTypeDetector {
             // 重置流到开始位置
             inputStream.mark(Integer.MAX_VALUE);
 
-            try (ZipInputStream zipStream = new ZipInputStream(inputStream)) {
+            try {
+                // 不要关闭 ZipInputStream,因为对 ZipInputStream 进行close会导致外部传进来的业务流被关闭
+                ZipInputStream zipStream = new ZipInputStream(inputStream);
                 ZipEntry entry;
                 Set<String> entryNames = new HashSet<>();
 
@@ -249,6 +251,8 @@ public class FileTypeDetector {
                         return "application/vnd.oasis.opendocument.text"; // 可能是ODT/ODS/ODP，需要更详细检测
                     }
                 }
+
+            } finally {
 
             }
         } catch (IOException e) {

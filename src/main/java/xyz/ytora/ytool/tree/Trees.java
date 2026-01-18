@@ -1,6 +1,7 @@
 package xyz.ytora.ytool.tree;
 
 import xyz.ytora.ytool.coll.Colls;
+import xyz.ytora.ytool.str.Strs;
 
 import java.util.*;
 import java.util.function.Function;
@@ -115,7 +116,7 @@ public class Trees {
      * @param <T> 目标数据元素类型
      */
     public static <T extends ITree<T>> List<T> toTree(List<T> items, String key, NodeVisitor<T> visitor) {
-        if (key == null) {
+        if (Strs.isEmpty(key)) {
             return toTree(items, visitor);
         }
 
